@@ -1,0 +1,11 @@
+# Prometheus scrape config (used by the prometheus container in docker-compose).
+# Prometheus PULLS metrics from the app's /metrics endpoint on this schedule.
+global:
+  scrape_interval: 15s
+
+scrape_configs:
+  - job_name: "incident-manager"
+    metrics_path: /metrics
+    static_configs:
+      # 'app' is the Compose service name — reachable on the shared network.
+      - targets: ["app:8000"]

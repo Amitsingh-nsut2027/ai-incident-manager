@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI Incident Manager — Dashboard</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    :root { color-scheme: dark; }
+    * { box-sizing: border-box; }
+    body { font-family: -apple-system, Segoe UI, Roboto, sans-serif; margin: 0;
+           background: #0f172a; color: #e2e8f0; }
+    header { background: #1e293b; padding: 16px 24px; font-size: 20px; font-weight: 700;
+             border-bottom: 1px solid #334155; display: flex; justify-content: space-between; align-items: center; }
+    .health { font-size: 13px; font-weight: 400; }
+    .dot { display:inline-block; width:9px; height:9px; border-radius:50%; margin:0 4px; }
+    .ok { background:#22c55e; } .bad { background:#ef4444; }
+    main { padding: 24px; max-width: 1100px; margin: 0 auto; }
+    .cards { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 24px; }
+    .card { background: #1e293b; border: 1px solid #334155; border-radius: 12px; padding: 18px; }
+    .card .num { font-size: 32px; font-weight: 800; }
+    .card .label { color: #94a3b8; font-size: 13px; margin-top: 4px; }
+    .charts { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 24px; }
+    .panel { background: #1e293b; border: 1px solid #334155; border-radius: 12px; padding: 18px; }
+    .panel h3 { margin: 0 0 12px; font-size: 14px; color: #cbd5e1; }
+    table { width: 100%; border-collapse: collapse; font-size: 14px; }
+    th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid #334155; }
+    th { color: #94a3b8; font-weight: 600; }
+    #login { max-width: 360px; margin: 80px auto; background: #1e293b; padding: 28px;
+             border-radius: 12px; border: 1px solid #334155; }
+    #login h2 { margin-top: 0; }
+    input { width: 100%; padding: 10px; margin: 8px 0; border-radius: 8px; border: 1px solid #475569;
+            background: #0f172a; color: #e2e8f0; }
+    button { width: 100%; padding: 11px; background: #3b82f6; color: white; border: none;
+             border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 15px; }
+    button:hover { background: #2563eb; }
+    .err { color: #f87171; font-size: 13px; min-height: 18px; }
+    .sev { padding: 2px 8px; border-radius: 6px; font-size: 12px; font-weight: 700; }
+  </style>
+</head>
+<body>
+  <!-- Login view -->
+  <div id="login">
+    <h2>🛡️ Incident Manager</h2>
+    <input id="email" placeholder="email" value="amit@example.com" />
+    <input id="password" type="password" placeholder="password" />
+    <button onclick="login()">Log in</button>
+    <p class="err" id="loginErr"></p>
+  </div>
+
+  <!-- Dashboard view -->
+  <div id="app" style="display:none;">
+    <header>
+      <span>🛡️ AI Incident Manager</span>
+      <span class="health" id="health"></span>
+    </header>
+    <main>
+      <div class="cards" id="cards"></div>
+      <div class="charts">
+        <div class="panel"><h3>Incidents by Severity</h3><canvas id="sevChart"></canvas></div>
+        <div class="panel"><h3>Incidents by Status</h3><canvas id="statusChart"></canvas></div>
+      </div>
+      <div class="panel">
+        <h3>Recent Incidents</h3>
+        <table>
+          <thead><tr><th>ID</th><th>Service</th><th>Severity</th><th>Status</th><th>Created</th></tr></thead>
+          <tbody id="recent"></tbody>
+        </table>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    let token = localStorage.getItem("token");
+
+    async function login() {
+      const email = document.getElementById("email").value;
+      const password = document.getElementById("password").value;
+      const body = new URLSearchParams({ username: email, password });
+      const res = await fetch("/auth/login", { method: "POST", body });
+      if (!res.ok) { document.getElementById("loginErr").textContent = "Login failed"; return; }
+      const data = await res.json();
+      token = data.access_token;
+      localStorage.setItem("token", token);
+      showDashboard();
+    }
+
+    async function showDashboard() {
+      const res = await fetch("/dashboard/stats", { headers: { Authorization: "Bearer " + token } });
+      if (!res.ok) { localStorage.removeItem("token"); location.reload(); return; }
+      const s = await res.json();
+
+      document.getElementById("login").style.display = "none";
+      document.getElementById("app").style.display = "block";
+
+      // stat cards
+      document.getElementById("cards").innerHTML = [
+        ["Incidents", s.total_incidents], ["Log lines", s.total_logs],
+        ["AI Reports", s.total_reports], ["Error logs", s.error_logs],
+      ].map(([l, n]) => `<div class="card"><div class="num">${n}</div><div class="label">${l}</div></div>`).join("");
+
+      // charts
+      const sevLabels = Object.keys(s.by_severity);
+      makeChart("sevChart", "doughnut", sevLabels.map(k => k === "unassigned" ? k : "SEV-" + k),
+                Object.values(s.by_severity), ["#ef4444","#f97316","#eab308","#22c55e","#64748b"]);
+      makeChart("statusChart", "bar", Object.keys(s.by_status), Object.values(s.by_status), ["#3b82f6"]);
+
+      // recent table
+      document.getElementById("recent").innerHTML = s.recent_incidents.map(i => `
+        <tr><td>#${i.id}</td><td>${i.service}</td>
+        <td>${i.severity ? "SEV-" + i.severity : "—"}</td>
+        <td>${i.status}</td>
+        <td>${new Date(i.created_at).toLocaleString()}</td></tr>`).join("") ||
+        `<tr><td colspan="5">No incidents yet</td></tr>`;
+
+      // health
+      const h = await (await fetch("/dashboard/health")).json();
+      document.getElementById("health").innerHTML =
+        `DB <span class="dot ${h.database ? 'ok':'bad'}"></span>  LLM <span class="dot ${h.llm ? 'ok':'bad'}"></span>`;
+    }
+
+    const charts = {};
+    function makeChart(id, type, labels, data, colors) {
+      if (charts[id]) charts[id].destroy();
+      charts[id] = new Chart(document.getElementById(id), {
+        type, data: { labels, datasets: [{ data, backgroundColor: colors }] },
+        options: { plugins: { legend: { labels: { color: "#cbd5e1" } } },
+                   scales: type === "bar" ? { x: { ticks: { color:"#94a3b8" } }, y: { ticks: { color:"#94a3b8" } } } : {} }
+      });
+    }
+
+    if (token) showDashboard();
+  </script>
+</body>
+</html>

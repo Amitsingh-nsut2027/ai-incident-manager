@@ -1,0 +1,11 @@
+# Keep the image small and clean — exclude things the container doesn't need.
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.git/
+.env
+chroma_db/
+tests/
+*.md
+demo.py

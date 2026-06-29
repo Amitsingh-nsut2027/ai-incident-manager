@@ -1,0 +1,19 @@
+# Virtual environment
+.venv/
+venv/
+
+# Secrets / local config
+.env
+
+# Vector store (regenerable)
+chroma_db/
+
+# Python caches
+__pycache__/
+*.pyc
+*.pyo
+
+# OS / editor junk
+.DS_Store
+.vscode/
+.idea/

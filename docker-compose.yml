@@ -1,0 +1,53 @@
+# Runs the whole system with one command:  docker compose up
+# Note: Ollama runs on your HOST machine (it needs the GPU), so the app reaches
+# it via host.docker.internal. Everything else runs in containers.
+
+services:
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_DB: incident_manager
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    volumes:
+      - pgdata:/var/lib/postgresql/data   # persists DB data across restarts
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  app:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      # Reach the 'db' container by its service name (Compose networking).
+      DATABASE_URL: postgresql+psycopg://postgres:postgres@db:5432/incident_manager
+      # Reach Ollama running on the host machine.
+      OLLAMA_HOST: http://host.docker.internal:11434
+      SECRET_KEY: change-me-in-production
+    extra_hosts:
+      - "host.docker.internal:host-gateway"  # lets the container reach the host
+    depends_on:
+      db:
+        condition: service_healthy   # wait until Postgres is ready
+
+  prometheus:
+    image: prom/prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
+
+  grafana:
+    image: grafana/grafana
+    ports:
+      - "3000:3000"
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: admin
+    depends_on:
+      - prometheus
+
+volumes:
+  pgdata:
