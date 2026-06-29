@@ -12,9 +12,13 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
 import app.models  # noqa: F401  -- ensures all models are registered on Base
+from app.core.limiter import limiter
 from app.db.base import Base
 from app.db.session import get_db
 from app.main import app
+
+# Disable rate limiting during tests so repeated logins don't trip the limiter.
+limiter.enabled = False
 
 
 @pytest.fixture

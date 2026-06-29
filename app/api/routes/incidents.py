@@ -8,10 +8,11 @@ it while keeping the code simple. (Async SQLAlchemy is a later, advanced option.
 As of Phase 8, these endpoints require authentication.
 """
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user, require_role
+from app.core.limiter import limiter
 from app.db.session import get_db
 from app.models.user import User
 from app.schemas.analysis import IncidentAnalysis
@@ -89,7 +90,9 @@ def get_incident_analysis(
 
 
 @router.post("/{incident_id}/analyze", response_model=ReportResponse)
+@limiter.limit("10/minute")  # the AI analysis is expensive — protect it (Phase 21)
 def analyze_incident(
+    request: Request,  # required by the rate limiter
     incident_id: int,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),

@@ -16,6 +16,7 @@ from pydantic import BaseModel, Field
 
 from app.agents.state import IncidentState
 from app.ai.models import get_chat_model
+from app.core.guards import sanitize_for_prompt
 from app.core.metrics import llm_calls_total
 from app.rag.knowledge import retrieve_context
 
@@ -37,7 +38,8 @@ def format_analysis(analysis: dict) -> str:
         lines.append("Correlated request flows:")
         for corr_id, msgs in correlations.items():
             lines.append(f"  [{corr_id}] " + " -> ".join(msgs))
-    return "\n".join(lines)
+    # Logs are UNTRUSTED input — sanitize before it reaches the LLM (Phase 21).
+    return sanitize_for_prompt("\n".join(lines))
 
 
 def _llm_text(system: str, user: str) -> str:

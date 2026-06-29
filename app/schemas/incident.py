@@ -14,9 +14,13 @@ from pydantic import BaseModel, ConfigDict, Field
 class IncidentCreate(BaseModel):
     """What a client must send to create an incident (POST body)."""
 
-    service: str = Field(..., min_length=1, examples=["checkout"])
+    service: str = Field(..., min_length=1, max_length=255, examples=["checkout"])
+    # max_length caps payload size — prevents DoS and LLM token blowup (Phase 21).
     raw_log: str = Field(
-        ..., min_length=1, examples=["ERROR 2026-06-29T10:00:00 timeout connecting to db"]
+        ...,
+        min_length=1,
+        max_length=200_000,
+        examples=["ERROR 2026-06-29T10:00:00 timeout connecting to db"],
     )
     # Optional. If provided, must be 1 (critical) .. 4 (minor).
     severity: int | None = Field(default=None, ge=1, le=4)
