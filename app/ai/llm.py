@@ -62,7 +62,11 @@ def chat_json(
 
 
 def is_available() -> bool:
-    """Return True if the Ollama server is reachable (for health checks)."""
+    """Return True if the active LLM provider is usable (for health checks)."""
+    # Cloud provider: healthy if an API key is configured.
+    if settings.LLM_PROVIDER == "groq":
+        return bool(settings.GROQ_API_KEY)
+    # Local provider: check the Ollama server is reachable.
     try:
         _client.list()
         return True
