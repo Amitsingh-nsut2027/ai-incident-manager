@@ -45,3 +45,9 @@ def dashboard_health(db: Session = Depends(get_db)):
 def dashboard_page():
     """Serve the dashboard web page."""
     return FileResponse(_STATIC_DIR / "dashboard.html")
+
+
+@router.get("/analyze")
+def analyze_page():
+    """Serve the simple 'paste logs -> get diagnosis' web page."""
+    return FileResponse(_STATIC_DIR / "analyze.html")

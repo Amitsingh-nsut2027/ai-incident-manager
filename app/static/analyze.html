@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI Incident Analyzer</title>
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <style>
+    :root { color-scheme: dark; }
+    * { box-sizing: border-box; }
+    body { font-family: -apple-system, Segoe UI, Roboto, sans-serif; margin: 0;
+           background: #0f172a; color: #e2e8f0; }
+    header { background: #1e293b; padding: 18px 24px; font-size: 20px; font-weight: 700;
+             border-bottom: 1px solid #334155; }
+    main { max-width: 820px; margin: 0 auto; padding: 24px; }
+    .sub { color: #94a3b8; margin: 4px 0 20px; }
+    textarea { width: 100%; min-height: 200px; padding: 14px; border-radius: 10px;
+               border: 1px solid #475569; background: #0b1220; color: #e2e8f0;
+               font-family: ui-monospace, Menlo, monospace; font-size: 13px; }
+    input { padding: 10px 12px; border-radius: 8px; border: 1px solid #475569;
+            background: #0b1220; color: #e2e8f0; }
+    button { padding: 12px 22px; background: #3b82f6; color: white; border: none;
+             border-radius: 9px; font-weight: 700; cursor: pointer; font-size: 15px; }
+    button:disabled { background: #475569; cursor: not-allowed; }
+    button:hover:not(:disabled) { background: #2563eb; }
+    .row { display: flex; gap: 12px; align-items: center; margin: 12px 0; flex-wrap: wrap; }
+    .card { background: #1e293b; border: 1px solid #334155; border-radius: 12px;
+            padding: 18px 20px; margin: 14px 0; }
+    .card h3 { margin: 0 0 8px; font-size: 14px; color: #93c5fd; text-transform: uppercase;
+               letter-spacing: .04em; }
+    .card .body :first-child { margin-top: 0; }
+    .sev { display:inline-block; padding: 6px 14px; border-radius: 999px; font-weight: 800; }
+    .s1 { background:#7f1d1d; color:#fecaca; } .s2 { background:#7c2d12; color:#fed7aa; }
+    .s3 { background:#713f12; color:#fde68a; } .s4 { background:#14532d; color:#bbf7d0; }
+    #login { max-width: 360px; margin: 60px auto; background:#1e293b; padding:26px;
+             border-radius:12px; border:1px solid #334155; }
+    #login input { width: 100%; margin: 8px 0; }
+    #spinner { display:none; margin: 20px 0; color:#93c5fd; }
+    .dot { animation: blink 1.4s infinite both; }
+    .dot:nth-child(2){animation-delay:.2s}.dot:nth-child(3){animation-delay:.4s}
+    @keyframes blink { 0%,80%,100%{opacity:.2} 40%{opacity:1} }
+    .err { color:#f87171; }
+    .examples { color:#64748b; font-size:13px; }
+    .examples a { color:#60a5fa; cursor:pointer; text-decoration: underline; }
+  </style>
+</head>
+<body>
+  <header>🛡️ AI Incident Analyzer</header>
+
+  <!-- Login -->
+  <div id="login">
+    <h2>Log in</h2>
+    <input id="email" placeholder="email" value="amit@example.com" />
+    <input id="password" type="password" placeholder="password" value="supersecret123" />
+    <button onclick="login()" style="width:100%;margin-top:8px;">Log in</button>
+    <p class="err" id="loginErr"></p>
+  </div>
+
+  <!-- App -->
+  <main id="app" style="display:none;">
+    <p class="sub">Paste your server error logs below, then click <b>Analyze</b>. The AI will diagnose the problem in about a minute.</p>
+
+    <div class="row">
+      <label>Service: <input id="service" value="checkout" style="width:160px;" /></label>
+    </div>
+
+    <textarea id="logs" placeholder="Paste error logs here, one per line...">2026-06-30T02:00:01 ERROR [checkout] timeout connecting to db after 30s
+2026-06-30T02:00:01 ERROR [checkout] connection pool exhausted (max=20)
+2026-06-30T02:00:02 CRITICAL [payment] payment failed: checkout unavailable</textarea>
+
+    <p class="examples">Try an example:
+      <a onclick="setExample('oom')">memory crash</a> ·
+      <a onclick="setExample('disk')">disk full</a> ·
+      <a onclick="setExample('auth')">login outage</a>
+    </p>
+
+    <div class="row">
+      <button id="goBtn" onclick="analyze()">🔍 Analyze</button>
+      <span id="spinner">AI is analyzing<span class="dot">.</span><span class="dot">.</span><span class="dot">.</span> (~1 min)</span>
+    </div>
+
+    <div id="result"></div>
+  </main>
+
+  <script>
+    let token = localStorage.getItem("token");
+    const EXAMPLES = {
+      oom: "2026-06-30 ERROR [api] OutOfMemoryError: Java heap space\n2026-06-30 CRITICAL [api] process killed (OOM), restarting\n2026-06-30 WARN [api] memory usage 98% of 2GB limit",
+      disk: "2026-06-30 ERROR [db] could not write to disk: No space left on device\n2026-06-30 CRITICAL [db] write-ahead log full, rejecting transactions\n2026-06-30 WARN [host] disk usage 100% on /var/lib",
+      auth: "2026-06-30 ERROR [auth] redis connection refused\n2026-06-30 ERROR [auth] cannot validate sessions, all logins failing\n2026-06-30 CRITICAL [auth] 100% of login requests returning 500",
+    };
+    function setExample(k){ document.getElementById("logs").value = EXAMPLES[k]; }
+
+    async function login() {
+      const body = new URLSearchParams({
+        username: document.getElementById("email").value,
+        password: document.getElementById("password").value,
+      });
+      const res = await fetch("/auth/login", { method: "POST", body });
+      if (!res.ok) { document.getElementById("loginErr").textContent = "Login failed"; return; }
+      token = (await res.json()).access_token;
+      localStorage.setItem("token", token);
+      showApp();
+    }
+    function showApp(){ document.getElementById("login").style.display="none";
+                        document.getElementById("app").style.display="block"; }
+
+    async function analyze() {
+      const logs = document.getElementById("logs").value.trim();
+      if (!logs) { alert("Paste some logs first!"); return; }
+      const btn = document.getElementById("goBtn");
+      btn.disabled = true;
+      document.getElementById("spinner").style.display = "inline";
+      document.getElementById("result").innerHTML = "";
+
+      try {
+        // 1. create the incident
+        const auth = { "Authorization": "Bearer " + token, "Content-Type": "application/json" };
+        const create = await fetch("/incidents", { method:"POST", headers: auth,
+          body: JSON.stringify({ service: document.getElementById("service").value || "service",
+                                 raw_log: logs, severity: null }) });
+        if (create.status === 401) { localStorage.removeItem("token"); location.reload(); return; }
+        const incident = await create.json();
+
+        // 2. run the AI analysis (this is the ~1 min call)
+        const res = await fetch(`/incidents/${incident.id}/analyze`, { method:"POST", headers: auth });
+        if (!res.ok) throw new Error("Analysis failed (status " + res.status + ")");
+        const r = await res.json();
+        render(r);
+      } catch (e) {
+        document.getElementById("result").innerHTML = `<p class="err">⚠️ ${e.message}</p>`;
+      } finally {
+        btn.disabled = false;
+        document.getElementById("spinner").style.display = "none";
+      }
+    }
+
+    function render(r) {
+      const sevNum = (r.severity_assessment || "").match(/SEV-([1-4])/);
+      const sev = sevNum ? sevNum[1] : "?";
+      const md = (t) => marked.parse(t || "_none_");
+      document.getElementById("result").innerHTML = `
+        <div class="row">
+          <span class="sev s${sev}">SEV-${sev}</span>
+          <span style="color:#94a3b8;">Confidence: ${Math.round((r.confidence_score||0)*100)}%</span>
+        </div>
+        <div class="card"><h3>🔍 Root Cause</h3><div class="body">${md(r.root_cause)}</div></div>
+        <div class="card"><h3>🚨 Severity</h3><div class="body">${md(r.severity_assessment)}</div></div>
+        <div class="card"><h3>🔧 Recommended Fix</h3><div class="body">${md(r.recommended_fix)}</div></div>
+        <div class="card"><h3>🛟 Recovery Plan</h3><div class="body">${md(r.recovery_plan)}</div></div>
+        <div class="card"><h3>📋 Post-Mortem</h3><div class="body">${md(r.post_mortem)}</div></div>
+      `;
+      document.getElementById("result").scrollIntoView({ behavior: "smooth" });
+    }
+
+    if (token) showApp();
+  </script>
+</body>
+</html>
