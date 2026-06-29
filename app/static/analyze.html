@@ -9,151 +9,239 @@
     :root { color-scheme: dark; }
     * { box-sizing: border-box; }
     body { font-family: -apple-system, Segoe UI, Roboto, sans-serif; margin: 0;
-           background: #0f172a; color: #e2e8f0; }
-    header { background: #1e293b; padding: 18px 24px; font-size: 20px; font-weight: 700;
-             border-bottom: 1px solid #334155; }
-    main { max-width: 820px; margin: 0 auto; padding: 24px; }
-    .sub { color: #94a3b8; margin: 4px 0 20px; }
-    textarea { width: 100%; min-height: 200px; padding: 14px; border-radius: 10px;
+           background: radial-gradient(1200px 600px at 50% -10%, #16233f 0%, #0f172a 55%); color: #e2e8f0; min-height: 100vh; }
+    header { background: rgba(30,41,59,.7); backdrop-filter: blur(8px); padding: 16px 24px;
+             font-size: 20px; font-weight: 800; border-bottom: 1px solid #334155;
+             display:flex; justify-content:space-between; align-items:center; position:sticky; top:0; z-index:5; }
+    header a { color:#93c5fd; font-size:14px; font-weight:600; text-decoration:none; }
+    main { max-width: 860px; margin: 0 auto; padding: 24px; }
+    .sub { color: #94a3b8; margin: 4px 0 18px; }
+    textarea { width: 100%; min-height: 170px; padding: 14px; border-radius: 12px;
                border: 1px solid #475569; background: #0b1220; color: #e2e8f0;
-               font-family: ui-monospace, Menlo, monospace; font-size: 13px; }
+               font-family: ui-monospace, Menlo, monospace; font-size: 13px; transition:border .2s; }
+    textarea:focus { outline:none; border-color:#3b82f6; box-shadow:0 0 0 3px rgba(59,130,246,.2); }
     input { padding: 10px 12px; border-radius: 8px; border: 1px solid #475569;
             background: #0b1220; color: #e2e8f0; }
-    button { padding: 12px 22px; background: #3b82f6; color: white; border: none;
-             border-radius: 9px; font-weight: 700; cursor: pointer; font-size: 15px; }
-    button:disabled { background: #475569; cursor: not-allowed; }
-    button:hover:not(:disabled) { background: #2563eb; }
-    .row { display: flex; gap: 12px; align-items: center; margin: 12px 0; flex-wrap: wrap; }
-    .card { background: #1e293b; border: 1px solid #334155; border-radius: 12px;
-            padding: 18px 20px; margin: 14px 0; }
-    .card h3 { margin: 0 0 8px; font-size: 14px; color: #93c5fd; text-transform: uppercase;
-               letter-spacing: .04em; }
-    .card .body :first-child { margin-top: 0; }
-    .sev { display:inline-block; padding: 6px 14px; border-radius: 999px; font-weight: 800; }
-    .s1 { background:#7f1d1d; color:#fecaca; } .s2 { background:#7c2d12; color:#fed7aa; }
-    .s3 { background:#713f12; color:#fde68a; } .s4 { background:#14532d; color:#bbf7d0; }
-    #login { max-width: 360px; margin: 60px auto; background:#1e293b; padding:26px;
-             border-radius:12px; border:1px solid #334155; }
-    #login input { width: 100%; margin: 8px 0; }
-    #spinner { display:none; margin: 20px 0; color:#93c5fd; }
-    .dot { animation: blink 1.4s infinite both; }
-    .dot:nth-child(2){animation-delay:.2s}.dot:nth-child(3){animation-delay:.4s}
-    @keyframes blink { 0%,80%,100%{opacity:.2} 40%{opacity:1} }
+    button { padding: 13px 26px; background: linear-gradient(180deg,#3b82f6,#2563eb); color: white;
+             border: none; border-radius: 10px; font-weight: 800; cursor: pointer; font-size: 15px; transition: transform .08s, opacity .2s; }
+    button:active:not(:disabled){ transform: scale(.97); }
+    button:disabled { background:#475569; cursor:not-allowed; opacity:.7; }
+    .row { display:flex; gap:12px; align-items:center; margin:12px 0; flex-wrap:wrap; }
+    .chip { background:#1e293b; border:1px solid #334155; color:#cbd5e1; border-radius:999px;
+            padding:7px 13px; font-size:13px; cursor:pointer; transition:.15s; }
+    .chip:hover { border-color:#3b82f6; color:#fff; transform:translateY(-1px); }
+
+    /* Agent stepper */
+    #steps { display:none; margin:18px 0; }
+    .step { display:flex; align-items:center; gap:12px; padding:11px 14px; border-radius:10px;
+            margin:7px 0; background:#111c33; border:1px solid #243049; opacity:.45; transition:.35s; }
+    .step.active { opacity:1; border-color:#3b82f6; background:#15233f; box-shadow:0 0 0 3px rgba(59,130,246,.12); }
+    .step.done { opacity:1; border-color:#14532d; }
+    .step .ic { font-size:20px; width:26px; text-align:center; }
+    .step .nm { font-weight:600; }
+    .step .st { margin-left:auto; font-size:13px; color:#64748b; }
+    .step.active .st { color:#93c5fd; }
+    .step.done .st { color:#4ade80; }
+    .spin { width:15px; height:15px; border:2px solid #3b82f6; border-top-color:transparent;
+            border-radius:50%; animation:spin .8s linear infinite; }
+    @keyframes spin { to { transform:rotate(360deg); } }
+
+    /* Results */
+    #result { margin-top:8px; }
+    .verdict { display:flex; gap:16px; align-items:center; flex-wrap:wrap; margin:14px 0; }
+    .sev { display:inline-flex; align-items:center; justify-content:center; width:74px; height:74px;
+           border-radius:16px; font-weight:900; font-size:20px; }
+    .s1{background:#7f1d1d;color:#fecaca}.s2{background:#7c2d12;color:#fed7aa}
+    .s3{background:#713f12;color:#fde68a}.s4{background:#14532d;color:#bbf7d0}
+    .conf { flex:1; min-width:200px; }
+    .bar { height:12px; background:#1e293b; border-radius:999px; overflow:hidden; margin-top:6px; }
+    .bar > div { height:100%; background:linear-gradient(90deg,#22c55e,#3b82f6); width:0; transition:width 1s ease; }
+    .card { background:#1e293b; border:1px solid #334155; border-radius:14px; padding:18px 20px;
+            margin:14px 0; opacity:0; transform:translateY(10px); animation:rise .5s forwards; }
+    @keyframes rise { to { opacity:1; transform:none; } }
+    .card h3 { margin:0 0 8px; font-size:13px; color:#93c5fd; text-transform:uppercase; letter-spacing:.05em; }
+    .card .body :first-child { margin-top:0; } .card .body :last-child { margin-bottom:0; }
+    .actions { display:flex; gap:10px; margin:10px 0 0; }
+    .actions button { padding:9px 16px; font-size:13px; background:#334155; }
+    .actions button:hover { background:#475569; }
+
+    /* History */
+    #history { margin-top:30px; }
+    #history h3 { color:#cbd5e1; font-size:15px; }
+    .hrow { display:flex; gap:12px; align-items:center; padding:11px 14px; background:#1e293b;
+            border:1px solid #334155; border-radius:10px; margin:7px 0; cursor:pointer; transition:.15s; }
+    .hrow:hover { border-color:#3b82f6; transform:translateX(3px); }
+    .pill { font-size:11px; font-weight:800; padding:3px 9px; border-radius:999px; }
+
+    #login { max-width:360px; margin:70px auto; background:#1e293b; padding:28px; border-radius:14px; border:1px solid #334155; }
+    #login input { width:100%; margin:8px 0; }
     .err { color:#f87171; }
-    .examples { color:#64748b; font-size:13px; }
-    .examples a { color:#60a5fa; cursor:pointer; text-decoration: underline; }
   </style>
 </head>
 <body>
-  <header>🛡️ AI Incident Analyzer</header>
+  <header>
+    <span>🛡️ AI Incident Analyzer</span>
+    <a href="/dashboard">📊 Dashboard →</a>
+  </header>
 
-  <!-- Login -->
   <div id="login">
     <h2>Log in</h2>
     <input id="email" placeholder="email" value="amit@example.com" />
-    <input id="password" type="password" placeholder="password" value="supersecret123" />
+    <input id="password" type="password" value="supersecret123" />
     <button onclick="login()" style="width:100%;margin-top:8px;">Log in</button>
     <p class="err" id="loginErr"></p>
   </div>
 
-  <!-- App -->
   <main id="app" style="display:none;">
-    <p class="sub">Paste your server error logs below, then click <b>Analyze</b>. The AI will diagnose the problem in about a minute.</p>
-
-    <div class="row">
-      <label>Service: <input id="service" value="checkout" style="width:160px;" /></label>
-    </div>
-
-    <textarea id="logs" placeholder="Paste error logs here, one per line...">2026-06-30T02:00:01 ERROR [checkout] timeout connecting to db after 30s
+    <p class="sub">Paste server error logs, hit <b>Analyze</b>, and watch the 7 AI agents diagnose the problem live.</p>
+    <div class="row"><label>Service <input id="service" value="checkout" style="width:150px;" /></label></div>
+    <textarea id="logs">2026-06-30T02:00:01 ERROR [checkout] timeout connecting to db after 30s
 2026-06-30T02:00:01 ERROR [checkout] connection pool exhausted (max=20)
 2026-06-30T02:00:02 CRITICAL [payment] payment failed: checkout unavailable</textarea>
-
-    <p class="examples">Try an example:
-      <a onclick="setExample('oom')">memory crash</a> ·
-      <a onclick="setExample('disk')">disk full</a> ·
-      <a onclick="setExample('auth')">login outage</a>
-    </p>
-
     <div class="row">
-      <button id="goBtn" onclick="analyze()">🔍 Analyze</button>
-      <span id="spinner">AI is analyzing<span class="dot">.</span><span class="dot">.</span><span class="dot">.</span> (~1 min)</span>
+      <span style="color:#64748b;font-size:13px;">Examples:</span>
+      <span class="chip" onclick="setExample('oom')">💥 memory crash</span>
+      <span class="chip" onclick="setExample('disk')">💾 disk full</span>
+      <span class="chip" onclick="setExample('auth')">🔑 login outage</span>
+      <span class="chip" onclick="setExample('dns')">🌐 DNS failure</span>
     </div>
+    <div class="row"><button id="goBtn" onclick="analyze()">🔍 Analyze Incident</button></div>
 
+    <div id="steps"></div>
     <div id="result"></div>
+
+    <div id="history"><h3>🕘 Recent analyses</h3><div id="hlist"></div></div>
   </main>
 
   <script>
     let token = localStorage.getItem("token");
+    let stepTimer = null;
+    const AGENTS = [
+      ["📥","Log Analyzer"],["📡","Monitoring"],["🧠","Knowledge Retrieval (RAG)"],
+      ["🔍","Root Cause Analysis"],["🚨","Severity Assessment"],["🔧","Fix Recommendation"],
+      ["🛟","Recovery Planner"],["📋","Report Generator"],
+    ];
     const EXAMPLES = {
-      oom: "2026-06-30 ERROR [api] OutOfMemoryError: Java heap space\n2026-06-30 CRITICAL [api] process killed (OOM), restarting\n2026-06-30 WARN [api] memory usage 98% of 2GB limit",
-      disk: "2026-06-30 ERROR [db] could not write to disk: No space left on device\n2026-06-30 CRITICAL [db] write-ahead log full, rejecting transactions\n2026-06-30 WARN [host] disk usage 100% on /var/lib",
-      auth: "2026-06-30 ERROR [auth] redis connection refused\n2026-06-30 ERROR [auth] cannot validate sessions, all logins failing\n2026-06-30 CRITICAL [auth] 100% of login requests returning 500",
+      oom:"2026-06-30 ERROR [api] OutOfMemoryError: Java heap space\n2026-06-30 CRITICAL [api] process killed (OOM), restarting\n2026-06-30 WARN [api] memory usage 98% of 2GB limit",
+      disk:"2026-06-30 ERROR [db] could not write to disk: No space left on device\n2026-06-30 CRITICAL [db] write-ahead log full, rejecting transactions\n2026-06-30 WARN [host] disk usage 100% on /var/lib",
+      auth:"2026-06-30 ERROR [auth] redis connection refused\n2026-06-30 ERROR [auth] cannot validate sessions, all logins failing\n2026-06-30 CRITICAL [auth] 100% of login requests returning 500",
+      dns:"2026-06-30 ERROR [gateway] DNS resolution failed for payments.internal\n2026-06-30 CRITICAL [gateway] all upstream calls timing out\n2026-06-30 WARN [gateway] 503 rate at 87%",
     };
+    let lastReport = null;
     function setExample(k){ document.getElementById("logs").value = EXAMPLES[k]; }
 
-    async function login() {
-      const body = new URLSearchParams({
-        username: document.getElementById("email").value,
-        password: document.getElementById("password").value,
-      });
-      const res = await fetch("/auth/login", { method: "POST", body });
-      if (!res.ok) { document.getElementById("loginErr").textContent = "Login failed"; return; }
-      token = (await res.json()).access_token;
-      localStorage.setItem("token", token);
-      showApp();
+    async function login(){
+      const body=new URLSearchParams({username:email.value,password:password.value});
+      const res=await fetch("/auth/login",{method:"POST",body});
+      if(!res.ok){loginErr.textContent="Login failed";return;}
+      token=(await res.json()).access_token; localStorage.setItem("token",token); showApp();
     }
-    function showApp(){ document.getElementById("login").style.display="none";
-                        document.getElementById("app").style.display="block"; }
+    function showApp(){ login_.style.display="none"; app.style.display="block"; loadHistory(); }
 
-    async function analyze() {
-      const logs = document.getElementById("logs").value.trim();
-      if (!logs) { alert("Paste some logs first!"); return; }
-      const btn = document.getElementById("goBtn");
-      btn.disabled = true;
-      document.getElementById("spinner").style.display = "inline";
-      document.getElementById("result").innerHTML = "";
+    function renderSteps(){
+      steps.style.display="block";
+      steps.innerHTML = AGENTS.map((a,i)=>`
+        <div class="step" id="step${i}">
+          <span class="ic">${a[0]}</span><span class="nm">${a[1]}</span>
+          <span class="st" id="st${i}">waiting</span>
+        </div>`).join("");
+    }
+    function setStep(i,state){
+      const el=document.getElementById("step"+i), st=document.getElementById("st"+i);
+      if(!el) return;
+      el.className="step "+state;
+      st.innerHTML = state==="active" ? '<span class="spin"></span>'
+                   : state==="done" ? "✓ done" : "waiting";
+    }
+    function startStepAnimation(){
+      let i=0; renderSteps(); setStep(0,"active");
+      stepTimer=setInterval(()=>{
+        if(i<AGENTS.length-1){ setStep(i,"done"); i++; setStep(i,"active"); }
+      }, 6500);
+    }
+    function finishSteps(){ clearInterval(stepTimer); AGENTS.forEach((_,i)=>setStep(i,"done")); }
 
-      try {
-        // 1. create the incident
-        const auth = { "Authorization": "Bearer " + token, "Content-Type": "application/json" };
-        const create = await fetch("/incidents", { method:"POST", headers: auth,
-          body: JSON.stringify({ service: document.getElementById("service").value || "service",
-                                 raw_log: logs, severity: null }) });
-        if (create.status === 401) { localStorage.removeItem("token"); location.reload(); return; }
-        const incident = await create.json();
-
-        // 2. run the AI analysis (this is the ~1 min call)
-        const res = await fetch(`/incidents/${incident.id}/analyze`, { method:"POST", headers: auth });
-        if (!res.ok) throw new Error("Analysis failed (status " + res.status + ")");
-        const r = await res.json();
-        render(r);
-      } catch (e) {
-        document.getElementById("result").innerHTML = `<p class="err">⚠️ ${e.message}</p>`;
-      } finally {
-        btn.disabled = false;
-        document.getElementById("spinner").style.display = "none";
-      }
+    async function analyze(){
+      const logs=document.getElementById("logs").value.trim();
+      if(!logs){alert("Paste some logs first!");return;}
+      goBtn.disabled=true; result.innerHTML=""; startStepAnimation();
+      const auth={"Authorization":"Bearer "+token,"Content-Type":"application/json"};
+      try{
+        const c=await fetch("/incidents",{method:"POST",headers:auth,
+          body:JSON.stringify({service:service.value||"service",raw_log:logs,severity:null})});
+        if(c.status===401){localStorage.removeItem("token");location.reload();return;}
+        const inc=await c.json();
+        const res=await fetch(`/incidents/${inc.id}/analyze`,{method:"POST",headers:auth});
+        if(!res.ok) throw new Error("Analysis failed (HTTP "+res.status+")");
+        finishSteps(); render(await res.json()); loadHistory();
+      }catch(e){
+        clearInterval(stepTimer);
+        result.innerHTML=`<p class="err">⚠️ ${e.message}</p>`;
+      }finally{ goBtn.disabled=false; }
     }
 
-    function render(r) {
-      const sevNum = (r.severity_assessment || "").match(/SEV-([1-4])/);
-      const sev = sevNum ? sevNum[1] : "?";
-      const md = (t) => marked.parse(t || "_none_");
-      document.getElementById("result").innerHTML = `
-        <div class="row">
-          <span class="sev s${sev}">SEV-${sev}</span>
-          <span style="color:#94a3b8;">Confidence: ${Math.round((r.confidence_score||0)*100)}%</span>
+    function render(r){
+      lastReport=r;
+      const m=(r.severity_assessment||"").match(/SEV-([1-4])/); const sev=m?m[1]:"?";
+      const conf=Math.round((r.confidence_score||0)*100);
+      const md=t=>marked.parse(t||"_none_");
+      result.innerHTML=`
+        <div class="verdict">
+          <div class="sev s${sev}">SEV-${sev}</div>
+          <div class="conf"><b>AI Confidence: ${conf}%</b><div class="bar"><div id="cbar"></div></div></div>
+        </div>
+        <div class="actions">
+          <button onclick="copyReport()">📋 Copy</button>
+          <button onclick="downloadReport()">⬇️ Download .md</button>
         </div>
         <div class="card"><h3>🔍 Root Cause</h3><div class="body">${md(r.root_cause)}</div></div>
-        <div class="card"><h3>🚨 Severity</h3><div class="body">${md(r.severity_assessment)}</div></div>
-        <div class="card"><h3>🔧 Recommended Fix</h3><div class="body">${md(r.recommended_fix)}</div></div>
-        <div class="card"><h3>🛟 Recovery Plan</h3><div class="body">${md(r.recovery_plan)}</div></div>
-        <div class="card"><h3>📋 Post-Mortem</h3><div class="body">${md(r.post_mortem)}</div></div>
-      `;
-      document.getElementById("result").scrollIntoView({ behavior: "smooth" });
+        <div class="card" style="animation-delay:.08s"><h3>🚨 Severity</h3><div class="body">${md(r.severity_assessment)}</div></div>
+        <div class="card" style="animation-delay:.16s"><h3>🔧 Recommended Fix</h3><div class="body">${md(r.recommended_fix)}</div></div>
+        <div class="card" style="animation-delay:.24s"><h3>🛟 Recovery Plan</h3><div class="body">${md(r.recovery_plan)}</div></div>
+        <div class="card" style="animation-delay:.32s"><h3>📋 Post-Mortem</h3><div class="body">${md(r.post_mortem)}</div></div>`;
+      setTimeout(()=>{const b=document.getElementById("cbar"); if(b)b.style.width=conf+"%";},100);
+      result.scrollIntoView({behavior:"smooth"});
     }
 
-    if (token) showApp();
+    function reportText(){
+      const r=lastReport; if(!r) return "";
+      return `# Incident Report\n\n## Severity\n${r.severity_assessment}\n\n## Root Cause\n${r.root_cause}\n\n## Recommended Fix\n${r.recommended_fix}\n\n## Recovery Plan\n${r.recovery_plan}\n\n## Post-Mortem\n${r.post_mortem}\n\nConfidence: ${Math.round((r.confidence_score||0)*100)}%\n`;
+    }
+    function copyReport(){ navigator.clipboard.writeText(reportText()); alert("Report copied!"); }
+    function downloadReport(){
+      const blob=new Blob([reportText()],{type:"text/markdown"});
+      const a=document.createElement("a"); a.href=URL.createObjectURL(blob);
+      a.download="incident-report.md"; a.click();
+    }
+
+    async function loadHistory(){
+      const res=await fetch("/incidents?limit=8",{headers:{"Authorization":"Bearer "+token}});
+      if(!res.ok) return;
+      const items=await res.json();
+      hlist.innerHTML = items.map(i=>{
+        const s=i.severity||"?"; const cls=i.severity?("s"+i.severity):"";
+        const col={1:"#7f1d1d",2:"#7c2d12",3:"#713f12",4:"#14532d"}[i.severity]||"#334155";
+        return `<div class="hrow" onclick="viewReport(${i.id})">
+          <span class="pill" style="background:${col}">SEV-${s}</span>
+          <b>#${i.id}</b> <span style="color:#94a3b8">${i.service}</span>
+          <span style="margin-left:auto;color:#64748b;font-size:12px">${new Date(i.created_at).toLocaleString()}</span>
+        </div>`;}).join("") || '<p style="color:#64748b">No analyses yet.</p>';
+    }
+    async function viewReport(id){
+      const res=await fetch(`/incidents/${id}/report`,{headers:{"Authorization":"Bearer "+token}});
+      if(!res.ok){alert("No saved report for this incident yet.");return;}
+      steps.style.display="none"; render(await res.json());
+      window.scrollTo({top:0,behavior:"smooth"});
+    }
+
+    // alias for elements used before definition
+    const login_ = document.getElementById("login");
+    const email=document.getElementById("email"), password=document.getElementById("password");
+    const loginErr=document.getElementById("loginErr"), app=document.getElementById("app");
+    const service=document.getElementById("service"), goBtn=document.getElementById("goBtn");
+    const steps=document.getElementById("steps"), result=document.getElementById("result");
+    const hlist=document.getElementById("hlist");
+    if(token) showApp();
   </script>
 </body>
 </html>
