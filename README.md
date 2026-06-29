@@ -1,5 +1,9 @@
 # 🛡️ Enterprise AI Production Incident Manager
 
+### 🌐 [**Live Demo**](https://ai-incident-manager-kfox.onrender.com/analyze) · Python · FastAPI · LangGraph · RAG · Postgres · Docker · CI/CD
+
+> _First load may take ~30s (free-tier cold start), then it's fast._
+
 > A production-grade **multi-agent AI system** that automatically analyzes production incidents — it reads raw application logs, detects anomalies, finds the **root cause**, assigns **severity**, recommends **fixes**, generates a **recovery plan**, and writes a full **post-mortem** — all running **100% locally and free** on an open-source LLM.
 
 Inspired by the systems behind **Datadog, Splunk, PagerDuty, and New Relic**, this project demonstrates an end-to-end enterprise AI engineering stack: a secure REST backend, a multi-agent AI pipeline, retrieval-augmented generation (RAG), observability, testing, and CI/CD.
