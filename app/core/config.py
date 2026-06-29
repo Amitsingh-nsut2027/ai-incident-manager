@@ -34,9 +34,16 @@ class Settings(BaseSettings):
     LLM_TEMPERATURE: float = 0.2  # low = focused/deterministic (good for analysis)
     OLLAMA_HOST: str = "http://localhost:11434"
 
+    # Provider switch: "ollama" (local, free) or "groq" (cloud, free hosted API).
+    LLM_PROVIDER: str = "ollama"
+    GROQ_API_KEY: str = ""
+    GROQ_MODEL: str = "llama-3.1-8b-instant"
+
     # --- RAG (Phase 15) ---
     EMBEDDING_MODEL: str = "nomic-embed-text"  # local Ollama embedding model
     CHROMA_DIR: str = "./chroma_db"            # where the vector store persists
+    # RAG needs local embeddings; disable it in the cloud (no Ollama there).
+    RAG_ENABLED: bool = True
 
 
 # A single, importable settings instance used across the app.

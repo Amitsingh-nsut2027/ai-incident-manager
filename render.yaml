@@ -1,0 +1,22 @@
+# Render Blueprint — deploys the app as a free Docker web service.
+# After connecting the repo, set the secret env vars (GROQ_API_KEY, DATABASE_URL)
+# in the Render dashboard (they're marked sync: false so they aren't committed).
+services:
+  - type: web
+    name: ai-incident-manager
+    runtime: docker
+    plan: free
+    healthCheckPath: /health
+    envVars:
+      - key: LLM_PROVIDER
+        value: groq
+      - key: GROQ_MODEL
+        value: llama-3.1-8b-instant
+      - key: RAG_ENABLED
+        value: "false"
+      - key: SECRET_KEY
+        generateValue: true        # Render generates a strong secret
+      - key: GROQ_API_KEY
+        sync: false                # set manually in the dashboard (secret)
+      - key: DATABASE_URL
+        sync: false                # set to your Neon connection string

@@ -16,6 +16,7 @@ from pydantic import BaseModel, Field
 
 from app.agents.state import IncidentState
 from app.ai.models import get_chat_model
+from app.core.config import settings
 from app.core.guards import sanitize_for_prompt
 from app.core.metrics import llm_calls_total
 from app.rag.knowledge import retrieve_context
@@ -76,13 +77,22 @@ def monitoring_node(state: IncidentState) -> dict:
 
 # === RAG retrieval (Phase 15) ===============================================
 def retrieval_node(state: IncidentState) -> dict:
-    """Fetch relevant runbooks / past incidents from the vector store."""
-    query = f"{state.get('log_summary', '')} {state.get('anomalies', '')}"
-    docs = retrieve_context(query, k=3)
-    context = "\n\n".join(
-        f"[{d.metadata.get('title', 'doc')}] {d.page_content}" for d in docs
-    )
-    return {"retrieved_context": context or "(no relevant knowledge found)"}
+    """Fetch relevant runbooks / past incidents from the vector store.
+
+    RAG depends on local embeddings (Ollama), so it degrades gracefully when
+    disabled or unavailable (e.g. in the cloud) — the agents still run.
+    """
+    if not settings.RAG_ENABLED:
+        return {"retrieved_context": "(knowledge base disabled)"}
+    try:
+        query = f"{state.get('log_summary', '')} {state.get('anomalies', '')}"
+        docs = retrieve_context(query, k=3)
+        context = "\n\n".join(
+            f"[{d.metadata.get('title', 'doc')}] {d.page_content}" for d in docs
+        )
+        return {"retrieved_context": context or "(no relevant knowledge found)"}
+    except Exception:
+        return {"retrieved_context": "(knowledge base unavailable)"}
 
 
 # === 3. Root Cause (RAG-augmented) ==========================================
