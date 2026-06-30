@@ -94,7 +94,10 @@
 
   <main id="app" style="display:none;">
     <p class="sub">Paste server error logs, hit <b>Analyze</b>, and watch the 7 AI agents diagnose the problem live.</p>
-    <div class="row"><label>Service <input id="service" value="checkout" style="width:150px;" /></label></div>
+    <div class="row">
+      <label>Affected service <input id="service" value="checkout" placeholder="e.g. checkout, email, auth" style="width:170px;" /></label>
+      <span style="color:#64748b;font-size:12px;">← which system the logs came from (just a label; change or keep it)</span>
+    </div>
     <textarea id="logs">2026-06-30T02:00:01 ERROR [checkout] timeout connecting to db after 30s
 2026-06-30T02:00:01 ERROR [checkout] connection pool exhausted (max=20)
 2026-06-30T02:00:02 CRITICAL [payment] payment failed: checkout unavailable</textarea>
