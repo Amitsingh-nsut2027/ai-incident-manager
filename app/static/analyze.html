@@ -107,10 +107,14 @@
   </header>
 
   <div id="login">
-    <h2>Log in</h2>
+    <h2 id="loginTitle">Log in</h2>
     <input id="email" placeholder="email" value="amit@example.com" />
-    <input id="password" type="password" value="supersecret123" />
-    <button onclick="login()" style="width:100%;margin-top:8px;">Log in</button>
+    <input id="password" type="password" placeholder="password (min 8 chars)" value="supersecret123" />
+    <button id="primaryBtn" onclick="submitAuth()" style="width:100%;margin-top:8px;">Log in</button>
+    <p class="hint" style="margin-top:12px;text-align:center;">
+      <span id="toggleText">New here?</span>
+      <a id="toggleLink" onclick="toggleMode()" style="color:#60a5fa;cursor:pointer;text-decoration:underline;">Create an account</a>
+    </p>
     <p class="err" id="loginErr"></p>
   </div>
 
@@ -164,11 +168,34 @@
       toasts.appendChild(t); setTimeout(()=>{t.style.opacity=0; t.style.transition="opacity .4s"; setTimeout(()=>t.remove(),400);},2600); }
     function bar(w){ topbar.style.width=w+"%"; }
 
+    let authMode = "login";
+    function toggleMode(){
+      authMode = authMode==="login" ? "register" : "login";
+      const isLogin = authMode==="login";
+      document.getElementById("loginTitle").textContent = isLogin ? "Log in" : "Create account";
+      document.getElementById("primaryBtn").textContent = isLogin ? "Log in" : "Sign up";
+      document.getElementById("toggleText").textContent = isLogin ? "New here?" : "Already have an account?";
+      document.getElementById("toggleLink").textContent = isLogin ? "Create an account" : "Log in instead";
+      loginErr.textContent = "";
+    }
+    function submitAuth(){ authMode==="login" ? login() : register(); }
+
     async function login(){
       const body=new URLSearchParams({username:email.value,password:password.value});
       const res=await fetch("/auth/login",{method:"POST",body});
-      if(!res.ok){loginErr.textContent="Login failed";return;}
+      if(!res.ok){loginErr.textContent="Login failed — check your email/password";return;}
       token=(await res.json()).access_token; localStorage.setItem("token",token); showApp(); toast("Welcome back! 👋");
+    }
+
+    async function register(){
+      const em=email.value.trim(), pw=password.value;
+      if(pw.length<8){ loginErr.textContent="Password must be at least 8 characters"; return; }
+      const res=await fetch("/auth/register",{method:"POST",headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({email:em,password:pw})});
+      if(res.status===201){ toast("Account created — logging you in! 🎉"); await login(); }
+      else if(res.status===400){ loginErr.textContent="That email is already registered — try logging in."; }
+      else if(res.status===422){ loginErr.textContent="Enter a valid email and an 8+ character password."; }
+      else { loginErr.textContent="Registration failed (HTTP "+res.status+")"; }
     }
     function showApp(){ login_.style.display="none"; app.style.display="block"; loadHistory(); }
 
