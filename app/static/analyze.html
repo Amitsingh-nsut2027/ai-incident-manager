@@ -5,80 +5,92 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>AI Incident Analyzer</title>
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
   <style>
     :root { color-scheme: dark; }
     * { box-sizing: border-box; }
     body { font-family: -apple-system, Segoe UI, Roboto, sans-serif; margin: 0;
            background: radial-gradient(1200px 600px at 50% -10%, #16233f 0%, #0f172a 55%); color: #e2e8f0; min-height: 100vh; }
+    /* top progress bar */
+    #topbar { position:fixed; top:0; left:0; height:3px; width:0; background:linear-gradient(90deg,#22c55e,#3b82f6,#a855f7);
+              z-index:50; transition:width .4s ease; box-shadow:0 0 8px #3b82f6; }
     header { background: rgba(30,41,59,.7); backdrop-filter: blur(8px); padding: 16px 24px;
              font-size: 20px; font-weight: 800; border-bottom: 1px solid #334155;
              display:flex; justify-content:space-between; align-items:center; position:sticky; top:0; z-index:5; }
     header a { color:#93c5fd; font-size:14px; font-weight:600; text-decoration:none; }
-    main { max-width: 860px; margin: 0 auto; padding: 24px; }
+    main { max-width: 880px; margin: 0 auto; padding: 24px; }
     .sub { color: #94a3b8; margin: 4px 0 18px; }
     textarea { width: 100%; min-height: 170px; padding: 14px; border-radius: 12px;
                border: 1px solid #475569; background: #0b1220; color: #e2e8f0;
-               font-family: ui-monospace, Menlo, monospace; font-size: 13px; transition:border .2s; }
+               font-family: ui-monospace, Menlo, monospace; font-size: 13px; transition:.2s; }
     textarea:focus { outline:none; border-color:#3b82f6; box-shadow:0 0 0 3px rgba(59,130,246,.2); }
-    input { padding: 10px 12px; border-radius: 8px; border: 1px solid #475569;
-            background: #0b1220; color: #e2e8f0; }
+    textarea.drop { border-color:#22c55e; box-shadow:0 0 0 3px rgba(34,197,94,.3); background:#0c1a12; }
+    input { padding: 10px 12px; border-radius: 8px; border: 1px solid #475569; background: #0b1220; color: #e2e8f0; }
     button { padding: 13px 26px; background: linear-gradient(180deg,#3b82f6,#2563eb); color: white;
              border: none; border-radius: 10px; font-weight: 800; cursor: pointer; font-size: 15px; transition: transform .08s, opacity .2s; }
     button:active:not(:disabled){ transform: scale(.97); }
     button:disabled { background:#475569; cursor:not-allowed; opacity:.7; }
+    .ghost { background:#1e293b; border:1px solid #334155; padding:9px 14px; font-size:13px; font-weight:600; }
+    .ghost:hover { border-color:#3b82f6; }
     .row { display:flex; gap:12px; align-items:center; margin:12px 0; flex-wrap:wrap; }
     .chip { background:#1e293b; border:1px solid #334155; color:#cbd5e1; border-radius:999px;
             padding:7px 13px; font-size:13px; cursor:pointer; transition:.15s; }
     .chip:hover { border-color:#3b82f6; color:#fff; transform:translateY(-1px); }
+    .hint { color:#64748b; font-size:12px; }
 
     /* Agent stepper */
     #steps { display:none; margin:18px 0; }
     .step { display:flex; align-items:center; gap:12px; padding:11px 14px; border-radius:10px;
-            margin:7px 0; background:#111c33; border:1px solid #243049; opacity:.45; transition:.35s; }
+            margin:7px 0; background:#111c33; border:1px solid #243049; opacity:.45; transition:.35s; cursor:help; }
     .step.active { opacity:1; border-color:#3b82f6; background:#15233f; box-shadow:0 0 0 3px rgba(59,130,246,.12); }
     .step.done { opacity:1; border-color:#14532d; }
     .step .ic { font-size:20px; width:26px; text-align:center; }
     .step .nm { font-weight:600; }
     .step .st { margin-left:auto; font-size:13px; color:#64748b; }
-    .step.active .st { color:#93c5fd; }
-    .step.done .st { color:#4ade80; }
-    .spin { width:15px; height:15px; border:2px solid #3b82f6; border-top-color:transparent;
-            border-radius:50%; animation:spin .8s linear infinite; }
+    .step.active .st { color:#93c5fd; } .step.done .st { color:#4ade80; }
+    .spin { width:15px; height:15px; border:2px solid #3b82f6; border-top-color:transparent; border-radius:50%; animation:spin .8s linear infinite; }
     @keyframes spin { to { transform:rotate(360deg); } }
 
     /* Results */
     #result { margin-top:8px; }
-    .verdict { display:flex; gap:16px; align-items:center; flex-wrap:wrap; margin:14px 0; }
-    .sev { display:inline-flex; align-items:center; justify-content:center; width:74px; height:74px;
-           border-radius:16px; font-weight:900; font-size:20px; }
-    .s1{background:#7f1d1d;color:#fecaca}.s2{background:#7c2d12;color:#fed7aa}
-    .s3{background:#713f12;color:#fde68a}.s4{background:#14532d;color:#bbf7d0}
+    .verdict { display:flex; gap:16px; align-items:center; flex-wrap:wrap; margin:14px 0; animation:rise .4s; }
+    .sev { display:inline-flex; align-items:center; justify-content:center; width:74px; height:74px; border-radius:16px; font-weight:900; font-size:20px; }
+    .s1{background:#7f1d1d;color:#fecaca}.s2{background:#7c2d12;color:#fed7aa}.s3{background:#713f12;color:#fde68a}.s4{background:#14532d;color:#bbf7d0}
     .conf { flex:1; min-width:200px; }
     .bar { height:12px; background:#1e293b; border-radius:999px; overflow:hidden; margin-top:6px; }
     .bar > div { height:100%; background:linear-gradient(90deg,#22c55e,#3b82f6); width:0; transition:width 1s ease; }
-    .card { background:#1e293b; border:1px solid #334155; border-radius:14px; padding:18px 20px;
-            margin:14px 0; opacity:0; transform:translateY(10px); animation:rise .5s forwards; }
-    @keyframes rise { to { opacity:1; transform:none; } }
-    .card h3 { margin:0 0 8px; font-size:13px; color:#93c5fd; text-transform:uppercase; letter-spacing:.05em; }
-    .card .body :first-child { margin-top:0; } .card .body :last-child { margin-bottom:0; }
-    .actions { display:flex; gap:10px; margin:10px 0 0; }
-    .actions button { padding:9px 16px; font-size:13px; background:#334155; }
-    .actions button:hover { background:#475569; }
+    .tabs { display:flex; gap:8px; flex-wrap:wrap; margin:14px 0 0; }
+    .tab { padding:9px 14px; border-radius:9px 9px 0 0; background:#16223c; border:1px solid #243049; border-bottom:none;
+           cursor:pointer; font-size:13px; font-weight:600; color:#94a3b8; transition:.15s; }
+    .tab.on { background:#1e293b; color:#fff; border-color:#3b82f6; }
+    .tab:hover { color:#fff; }
+    .panel { background:#1e293b; border:1px solid #334155; border-radius:0 12px 12px 12px; padding:18px 20px; animation:rise .35s; }
+    .panel :first-child{margin-top:0} .panel :last-child{margin-bottom:0}
+    @keyframes rise { from{opacity:0; transform:translateY(8px)} to{opacity:1; transform:none} }
+    .actions { display:flex; gap:10px; margin:12px 0; }
 
     /* History */
     #history { margin-top:30px; }
     #history h3 { color:#cbd5e1; font-size:15px; }
-    .hrow { display:flex; gap:12px; align-items:center; padding:11px 14px; background:#1e293b;
-            border:1px solid #334155; border-radius:10px; margin:7px 0; cursor:pointer; transition:.15s; }
+    .hrow { display:flex; gap:12px; align-items:center; padding:11px 14px; background:#1e293b; border:1px solid #334155;
+            border-radius:10px; margin:7px 0; cursor:pointer; transition:.15s; }
     .hrow:hover { border-color:#3b82f6; transform:translateX(3px); }
     .pill { font-size:11px; font-weight:800; padding:3px 9px; border-radius:999px; }
 
     #login { max-width:360px; margin:70px auto; background:#1e293b; padding:28px; border-radius:14px; border:1px solid #334155; }
     #login input { width:100%; margin:8px 0; }
     .err { color:#f87171; }
+
+    /* Toasts */
+    #toasts { position:fixed; bottom:20px; right:20px; z-index:60; display:flex; flex-direction:column; gap:8px; }
+    .toast { background:#1e293b; border:1px solid #3b82f6; color:#e2e8f0; padding:12px 16px; border-radius:10px;
+             box-shadow:0 8px 24px rgba(0,0,0,.4); animation:toastin .3s; font-size:14px; }
+    @keyframes toastin { from{opacity:0; transform:translateX(20px)} to{opacity:1; transform:none} }
   </style>
 </head>
 <body>
+  <div id="topbar"></div>
+  <div id="toasts"></div>
   <header>
     <span>🛡️ AI Incident Analyzer</span>
     <a href="/dashboard">📊 Dashboard →</a>
@@ -93,16 +105,17 @@
   </div>
 
   <main id="app" style="display:none;">
-    <p class="sub">Paste server error logs, hit <b>Analyze</b>, and watch the 7 AI agents diagnose the problem live.</p>
+    <p class="sub">Paste logs (or drop a file), then hit <b>Analyze</b> — watch 7 AI agents diagnose it live. <span class="hint">Tip: ⌘/Ctrl + Enter to analyze.</span></p>
     <div class="row">
-      <label>Affected service <input id="service" value="checkout" placeholder="e.g. checkout, email, auth" style="width:170px;" /></label>
-      <span style="color:#64748b;font-size:12px;">← which system the logs came from (just a label; change or keep it)</span>
+      <label>Affected service <input id="service" value="checkout" placeholder="e.g. checkout, email" style="width:170px;" /></label>
+      <button class="ghost" onclick="filein.click()">📎 Upload log file</button>
+      <input type="file" id="filein" accept=".log,.txt,text/*" style="display:none" />
     </div>
     <textarea id="logs">2026-06-30T02:00:01 ERROR [checkout] timeout connecting to db after 30s
 2026-06-30T02:00:01 ERROR [checkout] connection pool exhausted (max=20)
 2026-06-30T02:00:02 CRITICAL [payment] payment failed: checkout unavailable</textarea>
     <div class="row">
-      <span style="color:#64748b;font-size:13px;">Examples:</span>
+      <span class="hint">Examples:</span>
       <span class="chip" onclick="setExample('oom')">💥 memory crash</span>
       <span class="chip" onclick="setExample('disk')">💾 disk full</span>
       <span class="chip" onclick="setExample('auth')">🔑 login outage</span>
@@ -112,17 +125,21 @@
 
     <div id="steps"></div>
     <div id="result"></div>
-
     <div id="history"><h3>🕘 Recent analyses</h3><div id="hlist"></div></div>
   </main>
 
   <script>
     let token = localStorage.getItem("token");
-    let stepTimer = null;
+    let stepTimer = null, lastReport = null, sections = [];
     const AGENTS = [
-      ["📥","Log Analyzer"],["📡","Monitoring"],["🧠","Knowledge Retrieval (RAG)"],
-      ["🔍","Root Cause Analysis"],["🚨","Severity Assessment"],["🔧","Fix Recommendation"],
-      ["🛟","Recovery Planner"],["📋","Report Generator"],
+      ["📥","Log Analyzer","Summarizes what the logs show"],
+      ["📡","Monitoring","Detects anomalies & error spikes"],
+      ["🧠","Knowledge Retrieval (RAG)","Finds relevant runbooks & past incidents"],
+      ["🔍","Root Cause Analysis","Determines the most likely cause"],
+      ["🚨","Severity Assessment","Assigns SEV 1-4"],
+      ["🔧","Fix Recommendation","Suggests concrete fixes"],
+      ["🛟","Recovery Planner","Builds a step-by-step recovery plan"],
+      ["📋","Report Generator","Writes the post-mortem"],
     ];
     const EXAMPLES = {
       oom:"2026-06-30 ERROR [api] OutOfMemoryError: Java heap space\n2026-06-30 CRITICAL [api] process killed (OOM), restarting\n2026-06-30 WARN [api] memory usage 98% of 2GB limit",
@@ -130,44 +147,34 @@
       auth:"2026-06-30 ERROR [auth] redis connection refused\n2026-06-30 ERROR [auth] cannot validate sessions, all logins failing\n2026-06-30 CRITICAL [auth] 100% of login requests returning 500",
       dns:"2026-06-30 ERROR [gateway] DNS resolution failed for payments.internal\n2026-06-30 CRITICAL [gateway] all upstream calls timing out\n2026-06-30 WARN [gateway] 503 rate at 87%",
     };
-    let lastReport = null;
-    function setExample(k){ document.getElementById("logs").value = EXAMPLES[k]; }
+    function setExample(k){ document.getElementById("logs").value = EXAMPLES[k]; toast("Example loaded ✨"); }
+    function toast(msg){ const t=document.createElement("div"); t.className="toast"; t.textContent=msg;
+      toasts.appendChild(t); setTimeout(()=>{t.style.opacity=0; t.style.transition="opacity .4s"; setTimeout(()=>t.remove(),400);},2600); }
+    function bar(w){ topbar.style.width=w+"%"; }
 
     async function login(){
       const body=new URLSearchParams({username:email.value,password:password.value});
       const res=await fetch("/auth/login",{method:"POST",body});
       if(!res.ok){loginErr.textContent="Login failed";return;}
-      token=(await res.json()).access_token; localStorage.setItem("token",token); showApp();
+      token=(await res.json()).access_token; localStorage.setItem("token",token); showApp(); toast("Welcome back! 👋");
     }
     function showApp(){ login_.style.display="none"; app.style.display="block"; loadHistory(); }
 
     function renderSteps(){
       steps.style.display="block";
-      steps.innerHTML = AGENTS.map((a,i)=>`
-        <div class="step" id="step${i}">
-          <span class="ic">${a[0]}</span><span class="nm">${a[1]}</span>
-          <span class="st" id="st${i}">waiting</span>
-        </div>`).join("");
+      steps.innerHTML=AGENTS.map((a,i)=>`<div class="step" id="step${i}" title="${a[2]}">
+        <span class="ic">${a[0]}</span><span class="nm">${a[1]}</span><span class="st" id="st${i}">waiting</span></div>`).join("");
     }
-    function setStep(i,state){
-      const el=document.getElementById("step"+i), st=document.getElementById("st"+i);
-      if(!el) return;
-      el.className="step "+state;
-      st.innerHTML = state==="active" ? '<span class="spin"></span>'
-                   : state==="done" ? "✓ done" : "waiting";
-    }
-    function startStepAnimation(){
-      let i=0; renderSteps(); setStep(0,"active");
-      stepTimer=setInterval(()=>{
-        if(i<AGENTS.length-1){ setStep(i,"done"); i++; setStep(i,"active"); }
-      }, 6500);
-    }
-    function finishSteps(){ clearInterval(stepTimer); AGENTS.forEach((_,i)=>setStep(i,"done")); }
+    function setStep(i,s){ const el=document.getElementById("step"+i),st=document.getElementById("st"+i); if(!el)return;
+      el.className="step "+s; st.innerHTML = s==="active"?'<span class="spin"></span>':s==="done"?"✓ done":"waiting"; }
+    function startSteps(){ let i=0; renderSteps(); setStep(0,"active"); bar(12);
+      stepTimer=setInterval(()=>{ if(i<AGENTS.length-1){ setStep(i,"done"); i++; setStep(i,"active"); bar(12+i*11);} },6000); }
+    function finishSteps(){ clearInterval(stepTimer); AGENTS.forEach((_,i)=>setStep(i,"done")); bar(100); setTimeout(()=>bar(0),600); }
 
     async function analyze(){
       const logs=document.getElementById("logs").value.trim();
-      if(!logs){alert("Paste some logs first!");return;}
-      goBtn.disabled=true; result.innerHTML=""; startStepAnimation();
+      if(!logs){toast("⚠️ Paste some logs first!");return;}
+      goBtn.disabled=true; result.innerHTML=""; startSteps();
       const auth={"Authorization":"Bearer "+token,"Content-Type":"application/json"};
       try{
         const c=await fetch("/incidents",{method:"POST",headers:auth,
@@ -177,73 +184,77 @@
         const res=await fetch(`/incidents/${inc.id}/analyze`,{method:"POST",headers:auth});
         if(!res.ok) throw new Error("Analysis failed (HTTP "+res.status+")");
         finishSteps(); render(await res.json()); loadHistory();
-      }catch(e){
-        clearInterval(stepTimer);
-        result.innerHTML=`<p class="err">⚠️ ${e.message}</p>`;
-      }finally{ goBtn.disabled=false; }
+        confetti({particleCount:120, spread:75, origin:{y:.6}}); toast("Analysis complete! 🎉");
+      }catch(e){ clearInterval(stepTimer); bar(0); result.innerHTML=`<p class="err">⚠️ ${e.message}</p>`; toast("⚠️ "+e.message); }
+      finally{ goBtn.disabled=false; }
     }
 
     function render(r){
       lastReport=r;
       const m=(r.severity_assessment||"").match(/SEV-([1-4])/); const sev=m?m[1]:"?";
-      const conf=Math.round((r.confidence_score||0)*100);
-      const md=t=>marked.parse(t||"_none_");
+      const conf=Math.round((r.confidence_score||0)*100); const md=t=>marked.parse(t||"_none_");
+      sections=[["🔍 Root Cause",r.root_cause],["🚨 Severity",r.severity_assessment],
+                ["🔧 Fix",r.recommended_fix],["🛟 Recovery",r.recovery_plan],["📋 Post-Mortem",r.post_mortem]];
       result.innerHTML=`
         <div class="verdict">
           <div class="sev s${sev}">SEV-${sev}</div>
           <div class="conf"><b>AI Confidence: ${conf}%</b><div class="bar"><div id="cbar"></div></div></div>
         </div>
-        <div class="actions">
-          <button onclick="copyReport()">📋 Copy</button>
-          <button onclick="downloadReport()">⬇️ Download .md</button>
-        </div>
-        <div class="card"><h3>🔍 Root Cause</h3><div class="body">${md(r.root_cause)}</div></div>
-        <div class="card" style="animation-delay:.08s"><h3>🚨 Severity</h3><div class="body">${md(r.severity_assessment)}</div></div>
-        <div class="card" style="animation-delay:.16s"><h3>🔧 Recommended Fix</h3><div class="body">${md(r.recommended_fix)}</div></div>
-        <div class="card" style="animation-delay:.24s"><h3>🛟 Recovery Plan</h3><div class="body">${md(r.recovery_plan)}</div></div>
-        <div class="card" style="animation-delay:.32s"><h3>📋 Post-Mortem</h3><div class="body">${md(r.post_mortem)}</div></div>`;
+        <div class="actions"><button class="ghost" onclick="copyReport()">📋 Copy</button>
+          <button class="ghost" onclick="downloadReport()">⬇️ Download .md</button></div>
+        <div class="tabs" id="tabs"></div>
+        <div class="panel" id="panel"></div>`;
+      document.getElementById("tabs").innerHTML=sections.map((s,i)=>
+        `<div class="tab ${i===0?'on':''}" onclick="switchTab(${i})">${s[0]}</div>`).join("");
+      switchTab(0);
       setTimeout(()=>{const b=document.getElementById("cbar"); if(b)b.style.width=conf+"%";},100);
       result.scrollIntoView({behavior:"smooth"});
     }
+    function switchTab(i){
+      document.querySelectorAll(".tab").forEach((t,j)=>t.classList.toggle("on",j===i));
+      document.getElementById("panel").innerHTML=marked.parse(sections[i][1]||"_none_");
+    }
 
-    function reportText(){
-      const r=lastReport; if(!r) return "";
-      return `# Incident Report\n\n## Severity\n${r.severity_assessment}\n\n## Root Cause\n${r.root_cause}\n\n## Recommended Fix\n${r.recommended_fix}\n\n## Recovery Plan\n${r.recovery_plan}\n\n## Post-Mortem\n${r.post_mortem}\n\nConfidence: ${Math.round((r.confidence_score||0)*100)}%\n`;
-    }
-    function copyReport(){ navigator.clipboard.writeText(reportText()); alert("Report copied!"); }
-    function downloadReport(){
-      const blob=new Blob([reportText()],{type:"text/markdown"});
-      const a=document.createElement("a"); a.href=URL.createObjectURL(blob);
-      a.download="incident-report.md"; a.click();
-    }
+    function reportText(){ const r=lastReport; if(!r)return "";
+      return `# Incident Report\n\n## Severity\n${r.severity_assessment}\n\n## Root Cause\n${r.root_cause}\n\n## Fix\n${r.recommended_fix}\n\n## Recovery Plan\n${r.recovery_plan}\n\n## Post-Mortem\n${r.post_mortem}\n`; }
+    function copyReport(){ navigator.clipboard.writeText(reportText()); toast("Report copied! 📋"); }
+    function downloadReport(){ const b=new Blob([reportText()],{type:"text/markdown"}); const a=document.createElement("a");
+      a.href=URL.createObjectURL(b); a.download="incident-report.md"; a.click(); toast("Downloaded ⬇️"); }
 
     async function loadHistory(){
-      const res=await fetch("/incidents?limit=8",{headers:{"Authorization":"Bearer "+token}});
-      if(!res.ok) return;
+      const res=await fetch("/incidents?limit=8",{headers:{"Authorization":"Bearer "+token}}); if(!res.ok)return;
       const items=await res.json();
-      hlist.innerHTML = items.map(i=>{
-        const s=i.severity||"?"; const cls=i.severity?("s"+i.severity):"";
+      hlist.innerHTML=items.map(i=>{const s=i.severity||"?";
         const col={1:"#7f1d1d",2:"#7c2d12",3:"#713f12",4:"#14532d"}[i.severity]||"#334155";
-        return `<div class="hrow" onclick="viewReport(${i.id})">
-          <span class="pill" style="background:${col}">SEV-${s}</span>
+        return `<div class="hrow" onclick="viewReport(${i.id})"><span class="pill" style="background:${col}">SEV-${s}</span>
           <b>#${i.id}</b> <span style="color:#94a3b8">${i.service}</span>
-          <span style="margin-left:auto;color:#64748b;font-size:12px">${new Date(i.created_at).toLocaleString()}</span>
-        </div>`;}).join("") || '<p style="color:#64748b">No analyses yet.</p>';
+          <span style="margin-left:auto;color:#64748b;font-size:12px">${new Date(i.created_at).toLocaleString()}</span></div>`;
+      }).join("")||'<p class="hint">No analyses yet.</p>';
     }
     async function viewReport(id){
       const res=await fetch(`/incidents/${id}/report`,{headers:{"Authorization":"Bearer "+token}});
-      if(!res.ok){alert("No saved report for this incident yet.");return;}
-      steps.style.display="none"; render(await res.json());
-      window.scrollTo({top:0,behavior:"smooth"});
+      if(!res.ok){toast("No saved report for this one yet.");return;}
+      steps.style.display="none"; render(await res.json()); window.scrollTo({top:0,behavior:"smooth"});
     }
 
-    // alias for elements used before definition
-    const login_ = document.getElementById("login");
-    const email=document.getElementById("email"), password=document.getElementById("password");
-    const loginErr=document.getElementById("loginErr"), app=document.getElementById("app");
-    const service=document.getElementById("service"), goBtn=document.getElementById("goBtn");
-    const steps=document.getElementById("steps"), result=document.getElementById("result");
-    const hlist=document.getElementById("hlist");
+    // elements
+    const login_=document.getElementById("login"), email=document.getElementById("email"), password=document.getElementById("password");
+    const loginErr=document.getElementById("loginErr"), app=document.getElementById("app"), service=document.getElementById("service");
+    const goBtn=document.getElementById("goBtn"), steps=document.getElementById("steps"), result=document.getElementById("result");
+    const hlist=document.getElementById("hlist"), topbar=document.getElementById("topbar"), toasts=document.getElementById("toasts");
+    const filein=document.getElementById("filein"), logsEl=document.getElementById("logs");
+
+    // file upload
+    filein.addEventListener("change", e=>{ const f=e.target.files[0]; if(!f)return;
+      f.text().then(t=>{ logsEl.value=t; toast("📎 Loaded "+f.name); }); });
+    // drag & drop
+    logsEl.addEventListener("dragover", e=>{ e.preventDefault(); logsEl.classList.add("drop"); });
+    logsEl.addEventListener("dragleave", ()=>logsEl.classList.remove("drop"));
+    logsEl.addEventListener("drop", e=>{ e.preventDefault(); logsEl.classList.remove("drop");
+      const f=e.dataTransfer.files[0]; if(f) f.text().then(t=>{ logsEl.value=t; toast("📎 Loaded "+f.name); }); });
+    // keyboard shortcut
+    document.addEventListener("keydown", e=>{ if((e.metaKey||e.ctrlKey)&&e.key==="Enter"&&app.style.display!=="none") analyze(); });
+
     if(token) showApp();
   </script>
 </body>
