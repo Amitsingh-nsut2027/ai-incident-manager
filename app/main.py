@@ -17,7 +17,7 @@ from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
 
 from app import models  # noqa: F401  -- ensures all ORM models are registered
-from app.api.routes import auth, dashboard, health, incidents
+from app.api.routes import admin, auth, dashboard, health, incidents
 from app.core.config import settings
 from app.core.limiter import limiter
 from app.db.base import Base
@@ -50,6 +50,7 @@ app.include_router(health.router)
 app.include_router(auth.router)
 app.include_router(incidents.router)
 app.include_router(dashboard.router)
+app.include_router(admin.router)
 
 # Auto-instrument HTTP metrics (request count, latency, status codes) and
 # expose everything — including our custom metrics — at GET /metrics.
