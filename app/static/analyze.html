@@ -108,7 +108,7 @@
   <div id="toasts"></div>
   <header>
     <span>🛡️ AI Incident Analyzer</span>
-    <span><button class="ghost" onclick="toggleTheme()" style="margin-right:10px;">🌗 Theme</button><a href="/admin" style="margin-right:14px;">👑 Admin</a><a href="/dashboard">📊 Dashboard →</a></span>
+    <span><button class="ghost" onclick="toggleTheme()" style="margin-right:10px;">🌗 Theme</button><a href="/admin" style="margin-right:14px;">👑 Admin</a><a href="/dashboard" style="margin-right:14px;">📊 Dashboard</a><button class="ghost" id="logoutBtn" onclick="logout()" style="display:none;">🚪 Log out</button></span>
   </header>
 
   <div id="login">
@@ -205,7 +205,9 @@
       else if(res.status===422){ loginErr.textContent="Enter a valid email and an 8+ character password."; }
       else { loginErr.textContent="Registration failed (HTTP "+res.status+")"; }
     }
-    function showApp(){ login_.style.display="none"; app.style.display="block"; loadHistory(); }
+    function showApp(){ login_.style.display="none"; app.style.display="block";
+      document.getElementById("logoutBtn").style.display="inline-block"; loadHistory(); }
+    function logout(){ localStorage.removeItem("token"); toast("Logged out 👋"); setTimeout(()=>location.reload(),400); }
 
     function renderSteps(){
       steps.style.display="block";
