@@ -6,14 +6,18 @@ makes the logic reusable and easy to unit-test without spinning up a web server.
 
 import time
 
+from langchain_core.messages import HumanMessage, SystemMessage
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.agents.graph import incident_graph
+from app.ai.models import get_chat_model
+from app.core.guards import sanitize_for_prompt
 from app.core.metrics import (
     analyses_total,
     analysis_duration_seconds,
     incidents_created_total,
+    llm_calls_total,
 )
 from app.models.incident import Incident
 from app.models.log import Log
@@ -175,6 +179,35 @@ def run_full_analysis(db: Session, incident_id: int) -> Report | None:
     db.commit()
     db.refresh(report)
     return report
+
+
+def ask_about_incident(db: Session, incident_id: int, question: str) -> str | None:
+    """Answer a follow-up question grounded in the incident's saved report."""
+    report = get_report(db, incident_id)
+    if report is None:
+        return None
+
+    context = (
+        f"Root cause: {report.root_cause}\n"
+        f"Severity: {report.severity_assessment}\n"
+        f"Recommended fix: {report.recommended_fix}\n"
+        f"Recovery plan: {report.recovery_plan}\n"
+        f"Post-mortem: {report.post_mortem}"
+    )
+    llm_calls_total.inc()
+    response = get_chat_model().invoke(
+        [
+            SystemMessage(
+                content="You are an SRE assistant. Answer the user's question using "
+                "ONLY the incident report context provided. Be concise and helpful."
+            ),
+            HumanMessage(
+                content=f"Incident report:\n{sanitize_for_prompt(context)}\n\n"
+                f"Question: {sanitize_for_prompt(question)}"
+            ),
+        ]
+    )
+    return response.content.strip()
 
 
 def delete_incident(db: Session, incident_id: int) -> bool:

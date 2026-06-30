@@ -86,6 +86,16 @@
     .toast { background:#1e293b; border:1px solid #3b82f6; color:#e2e8f0; padding:12px 16px; border-radius:10px;
              box-shadow:0 8px 24px rgba(0,0,0,.4); animation:toastin .3s; font-size:14px; }
     @keyframes toastin { from{opacity:0; transform:translateX(20px)} to{opacity:1; transform:none} }
+
+    /* Light theme */
+    body.light { background:#eef2f7; color:#0f172a; }
+    body.light header { background:rgba(255,255,255,.85); border-color:#cbd5e1; }
+    body.light textarea, body.light input { background:#fff; color:#0f172a; border-color:#cbd5e1; }
+    body.light .panel, body.light .step, body.light .hrow, body.light #login { background:#fff; border-color:#cbd5e1; }
+    body.light .chip, body.light .ghost { background:#fff; color:#334155; }
+    body.light .tab { background:#e2e8f0; color:#475569; }
+    body.light .tab.on { background:#fff; color:#0f172a; }
+    body.light .sub, body.light .hint { color:#64748b; }
   </style>
 </head>
 <body>
@@ -93,7 +103,7 @@
   <div id="toasts"></div>
   <header>
     <span>🛡️ AI Incident Analyzer</span>
-    <a href="/dashboard">📊 Dashboard →</a>
+    <span><button class="ghost" onclick="toggleTheme()" style="margin-right:10px;">🌗 Theme</button><a href="/dashboard">📊 Dashboard →</a></span>
   </header>
 
   <div id="login">
@@ -130,7 +140,9 @@
 
   <script>
     let token = localStorage.getItem("token");
-    let stepTimer = null, lastReport = null, sections = [];
+    let stepTimer = null, lastReport = null, sections = [], currentId = null;
+    function toggleTheme(){ document.body.classList.toggle("light");
+      localStorage.setItem("theme", document.body.classList.contains("light")?"light":"dark"); }
     const AGENTS = [
       ["📥","Log Analyzer","Summarizes what the logs show"],
       ["📡","Monitoring","Detects anomalies & error spikes"],
@@ -190,7 +202,7 @@
     }
 
     function render(r){
-      lastReport=r;
+      lastReport=r; currentId=r.incident_id;
       const m=(r.severity_assessment||"").match(/SEV-([1-4])/); const sev=m?m[1]:"?";
       const conf=Math.round((r.confidence_score||0)*100); const md=t=>marked.parse(t||"_none_");
       sections=[["🔍 Root Cause",r.root_cause],["🚨 Severity",r.severity_assessment],
@@ -203,7 +215,14 @@
         <div class="actions"><button class="ghost" onclick="copyReport()">📋 Copy</button>
           <button class="ghost" onclick="downloadReport()">⬇️ Download .md</button></div>
         <div class="tabs" id="tabs"></div>
-        <div class="panel" id="panel"></div>`;
+        <div class="panel" id="panel"></div>
+        <h3 style="font-size:14px;color:#93c5fd;margin:20px 0 8px;">💬 Ask a follow-up</h3>
+        <div id="qa"></div>
+        <div class="row">
+          <input id="qInput" placeholder="e.g. How do I prevent this next time?" style="flex:1;min-width:240px;"
+                 onkeydown="if(event.key==='Enter')ask()" />
+          <button id="askBtn" onclick="ask()">Ask</button>
+        </div>`;
       document.getElementById("tabs").innerHTML=sections.map((s,i)=>
         `<div class="tab ${i===0?'on':''}" onclick="switchTab(${i})">${s[0]}</div>`).join("");
       switchTab(0);
@@ -213,6 +232,31 @@
     function switchTab(i){
       document.querySelectorAll(".tab").forEach((t,j)=>t.classList.toggle("on",j===i));
       document.getElementById("panel").innerHTML=marked.parse(sections[i][1]||"_none_");
+    }
+
+    async function ask(){
+      const inp=document.getElementById("qInput"); const q=inp.value.trim();
+      if(!q){toast("Type a question first");return;}
+      const qa=document.getElementById("qa"), btn=document.getElementById("askBtn");
+      qa.innerHTML+=`<div style="margin:10px 0 4px;"><b style="color:#93c5fd;">You:</b> ${q}</div>`;
+      inp.value=""; btn.disabled=true;
+      try{
+        const res=await fetch(`/incidents/${currentId}/ask`,{method:"POST",
+          headers:{"Authorization":"Bearer "+token,"Content-Type":"application/json"},
+          body:JSON.stringify({question:q})});
+        if(!res.ok) throw new Error("Ask failed (HTTP "+res.status+")");
+        const d=await res.json();
+        qa.innerHTML+=`<div class="panel" style="margin:4px 0;"><b style="color:#4ade80;">AI:</b> ${marked.parse(d.answer)}</div>`;
+      }catch(e){ qa.innerHTML+=`<p class="err">⚠️ ${e.message}</p>`; toast("⚠️ "+e.message); }
+      finally{ btn.disabled=false; }
+    }
+
+    async function deleteIncident(id){
+      if(!confirm("Delete incident #"+id+"?")) return;
+      const res=await fetch(`/incidents/${id}`,{method:"DELETE",headers:{"Authorization":"Bearer "+token}});
+      if(res.status===403){ toast("⛔ Admins only — promote your account to delete."); return; }
+      if(res.status===204){ toast("Deleted #"+id+" 🗑️"); loadHistory(); }
+      else toast("Delete failed (HTTP "+res.status+")");
     }
 
     function reportText(){ const r=lastReport; if(!r)return "";
@@ -228,7 +272,8 @@
         const col={1:"#7f1d1d",2:"#7c2d12",3:"#713f12",4:"#14532d"}[i.severity]||"#334155";
         return `<div class="hrow" onclick="viewReport(${i.id})"><span class="pill" style="background:${col}">SEV-${s}</span>
           <b>#${i.id}</b> <span style="color:#94a3b8">${i.service}</span>
-          <span style="margin-left:auto;color:#64748b;font-size:12px">${new Date(i.created_at).toLocaleString()}</span></div>`;
+          <span style="margin-left:auto;color:#64748b;font-size:12px">${new Date(i.created_at).toLocaleString()}</span>
+          <button class="ghost" style="padding:4px 9px;font-size:12px" onclick="event.stopPropagation();deleteIncident(${i.id})">🗑️</button></div>`;
       }).join("")||'<p class="hint">No analyses yet.</p>';
     }
     async function viewReport(id){
@@ -255,6 +300,7 @@
     // keyboard shortcut
     document.addEventListener("keydown", e=>{ if((e.metaKey||e.ctrlKey)&&e.key==="Enter"&&app.style.display!=="none") analyze(); });
 
+    if(localStorage.getItem("theme")==="light") document.body.classList.add("light");
     if(token) showApp();
   </script>
 </body>

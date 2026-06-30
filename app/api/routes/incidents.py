@@ -18,6 +18,7 @@ from app.models.user import User
 from app.schemas.analysis import IncidentAnalysis
 from app.schemas.incident import IncidentCreate, IncidentResponse
 from app.schemas.log import LogResponse
+from app.schemas.qa import AskRequest, AskResponse
 from app.schemas.report import ReportResponse
 from app.services import incident_service
 
@@ -123,6 +124,25 @@ def get_incident_report(
             detail="No report yet — run POST /incidents/{id}/analyze first",
         )
     return report
+
+
+@router.post("/{incident_id}/ask", response_model=AskResponse)
+@limiter.limit("20/minute")
+def ask_incident(
+    request: Request,
+    incident_id: int,
+    body: AskRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Ask a follow-up question about an analyzed incident (grounded in its report)."""
+    answer = incident_service.ask_about_incident(db, incident_id, body.question)
+    if answer is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="No report yet — analyze the incident first",
+        )
+    return AskResponse(answer=answer)
 
 
 @router.delete("/{incident_id}", status_code=status.HTTP_204_NO_CONTENT)
