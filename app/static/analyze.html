@@ -121,9 +121,6 @@
     <input id="password" type="password" placeholder="password (min 8 chars)" />
     <button id="primaryBtn" onclick="submitAuth()" style="width:100%;margin-top:8px;">Log in</button>
     <p class="err" id="loginErr"></p>
-    <p class="hint" style="text-align:center;margin-top:12px;">
-      <a onclick="fillDemo()" style="color:#60a5fa;cursor:pointer;">✨ Use demo account</a>
-    </p>
   </div>
 
   <main id="app" style="display:none;">
@@ -186,7 +183,6 @@
       loginErr.textContent = "";
     }
     function submitAuth(){ authMode==="login" ? login() : register(); }
-    function fillDemo(){ setMode("login"); email.value="amit@example.com"; password.value="supersecret123"; }
 
     async function login(){
       const body=new URLSearchParams({username:email.value,password:password.value});
